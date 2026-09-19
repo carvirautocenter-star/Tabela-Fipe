@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Consulta Tabela FIPE - Carros, Motos e Caminhões</title>
+  <title>Consulta Tabela FIPE (API v2) - Carros, Motos e Caminhões</title>
   <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -240,15 +240,15 @@
 
   <div class="container">
     <header>
-      <h1>Consulta Tabela FIPE</h1>
+      <h1>Consulta Tabela FIPE (v2)</h1>
       <p>Selecione a categoria e consulte o valor atualizado</p>
     </header>
 
     <!-- Abas Tipo Veículo -->
     <div class="tabs">
-      <button class="tab-btn active" data-type="carros" onclick="switchVehicleType('carros')">🚗 Carros</button>
-      <button class="tab-btn" data-type="motos" onclick="switchVehicleType('motos')">🏍️ Motos</button>
-      <button class="tab-btn" data-type="caminhoes" onclick="switchVehicleType('caminhoes')">🚚 Caminhões</button>
+      <button class="tab-btn active" data-type="cars" onclick="switchVehicleType('cars')">🚗 Carros</button>
+      <button class="tab-btn" data-type="motorcycles" onclick="switchVehicleType('motorcycles')">🏍️ Motos</button>
+      <button class="tab-btn" data-type="trucks" onclick="switchVehicleType('trucks')">🚚 Caminhões</button>
     </div>
 
     <!-- Dropdown Fabricante / Marca -->
@@ -319,9 +319,11 @@
   <div class="toast" id="toast">Copiado para a área de transferência!</div>
 
   <script>
-    // Configurações e Estado da Aplicação
+    // URL Base para a API V2 Oficial
     const API_BASE = "https://fipe.parallelum.com.br/api/v2";
-    let currentType = "carros";
+    
+    // Mapeamento exigido pela API v2: 'cars', 'motorcycles', 'trucks'
+    let currentType = "cars";
 
     // Elementos DOM
     const selectBrand = document.getElementById("selectBrand");
@@ -336,7 +338,7 @@
       loadBrands();
     });
 
-    // Trocar Categoria de Veículo (Carros, Motos, Caminhões)
+    // Trocar Categoria de Veículo
     function switchVehicleType(type) {
       if (currentType === type) return;
       currentType = type;
@@ -354,13 +356,14 @@
       loadBrands();
     }
 
-    // Buscar Marcas da API
+    // Buscar Marcas na v2
     async function loadBrands() {
       showLoader(true);
       resetDropdown(selectBrand, "Carregando marcas...");
       
       try {
         const response = await fetch(`${API_BASE}/${currentType}/brands`);
+        if (!response.ok) throw new Error("Erro na requisição v2");
         const brands = await response.json();
 
         selectBrand.innerHTML = '<option value="">-- Selecione uma marca --</option>';
@@ -372,14 +375,14 @@
         });
         selectBrand.disabled = false;
       } catch (error) {
-        console.error("Erro ao carregar marcas:", error);
+        console.error("Erro ao carregar marcas v2:", error);
         resetDropdown(selectBrand, "Erro ao carregar marcas");
       } finally {
         showLoader(false);
       }
     }
 
-    // Evento ao mudar Marca
+    // Buscar Modelos na v2
     async function onBrandChange() {
       const brandId = selectBrand.value;
       resetDropdown(selectModel, "Carregando modelos...");
@@ -394,7 +397,8 @@
       showLoader(true);
       try {
         const response = await fetch(`${API_BASE}/${currentType}/brands/${brandId}/models`);
-        const models = await response.json();
+        if (!response.ok) throw new Error("Erro na requisição v2");
+        const models = await response.json(); // Na v2 retorna Array direto [ ... ]
 
         selectModel.innerHTML = '<option value="">-- Selecione um modelo --</option>';
         models.forEach(model => {
@@ -405,14 +409,14 @@
         });
         selectModel.disabled = false;
       } catch (error) {
-        console.error("Erro ao carregar modelos:", error);
+        console.error("Erro ao carregar modelos v2:", error);
         resetDropdown(selectModel, "Erro ao carregar modelos");
       } finally {
         showLoader(false);
       }
     }
 
-    // Evento ao mudar Modelo
+    // Buscar Anos na v2
     async function onModelChange() {
       const brandId = selectBrand.value;
       const modelId = selectModel.value;
@@ -428,6 +432,7 @@
       showLoader(true);
       try {
         const response = await fetch(`${API_BASE}/${currentType}/brands/${brandId}/models/${modelId}/years`);
+        if (!response.ok) throw new Error("Erro na requisição v2");
         const years = await response.json();
 
         selectYear.innerHTML = '<option value="">-- Selecione o ano/opção --</option>';
@@ -439,14 +444,14 @@
         });
         selectYear.disabled = false;
       } catch (error) {
-        console.error("Erro ao carregar anos:", error);
+        console.error("Erro ao carregar anos v2:", error);
         resetDropdown(selectYear, "Erro ao carregar anos");
       } finally {
         showLoader(false);
       }
     }
 
-    // Evento ao mudar Ano (Busca o Preço/Resultado Final)
+    // Buscar Detalhes/Preço na v2
     async function onYearChange() {
       const brandId = selectBrand.value;
       const modelId = selectModel.value;
@@ -460,20 +465,21 @@
       showLoader(true);
       try {
         const response = await fetch(`${API_BASE}/${currentType}/brands/${brandId}/models/${modelId}/years/${yearId}`);
+        if (!response.ok) throw new Error("Erro na requisição v2");
         const data = await response.json();
 
-        // Preencher dados na tela
+        // Mapeamento dos campos na resposta v2
         document.getElementById("resVehicleName").textContent = data.model;
         document.getElementById("resPrice").textContent = data.price;
         document.getElementById("resBrand").textContent = data.brand;
         document.getElementById("resYear").textContent = data.modelYear === 32000 ? "Zero KM" : data.modelYear;
         document.getElementById("resFuel").textContent = data.fuel;
-        document.getElementById("resFipeCode").textContent = data.fipeCode;
+        document.getElementById("resFipeCode").textContent = data.codeFipe;
         document.getElementById("resRefMonth").textContent = data.referenceMonth;
 
         resultCard.style.display = "block";
       } catch (error) {
-        console.error("Erro ao buscar dados do veículo:", error);
+        console.error("Erro ao buscar dados na v2:", error);
         showToast("Erro ao obter dados da FIPE.");
       } finally {
         showLoader(false);
@@ -485,7 +491,6 @@
       const selectElem = document.getElementById(selectId);
       const options = Array.from(selectElem.options);
 
-      // Filtrar a primeira opção padrão (placeholder)
       const validOptions = options.filter(opt => opt.value !== "");
 
       if (validOptions.length === 0) {
@@ -493,10 +498,8 @@
         return;
       }
 
-      // Formatar lista como texto simples
       const listText = validOptions.map(opt => opt.textContent).join("\n");
 
-      // Copiar para o Clipboard
       navigator.clipboard.writeText(listText).then(() => {
         showToast(`Lista de ${categoryName} copiada com sucesso! (${validOptions.length} itens)`);
       }).catch(err => {
@@ -505,7 +508,7 @@
       });
     }
 
-    // Utilitários de Interface
+    // Utilitários
     function resetDropdown(element, defaultText) {
       element.innerHTML = `<option value="">${defaultText}</option>`;
       element.disabled = true;
